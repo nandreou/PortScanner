@@ -17,8 +17,10 @@ func main() {
 		goRoutines = flag.Int("t", 1, "GoRoutines")
 		ip_address = flag.String("ip-address", "127.0.0.1", "ip_address")
 		b_port     = flag.Bool("a", false, "Scan all 65535 ports (when this flag is used the value of -p flag is ignored)")
+		verbose    = flag.Bool("v", false, "verbose Output")
 		count      = 1
 		wg         sync.WaitGroup
+		openPorts  = []int{}
 	)
 
 	flag.Parse()
@@ -58,8 +60,13 @@ func main() {
 				result, err := net.DialTimeout("tcp", net.JoinHostPort(*ip_address, strconv.Itoa(j)), time.Duration(1*time.Second))
 
 				if err == nil {
+					openPorts = append(openPorts, j)
 					fmt.Println("[+] Port", j, "open")
 					result.Close()
+				} else {
+					if *verbose {
+						fmt.Println(err)
+					}
 				}
 			}
 		}(count)
@@ -70,14 +77,19 @@ func main() {
 	for i := count; i < count+restOfPorts; i++ {
 		result, err := net.DialTimeout("tcp", net.JoinHostPort(*ip_address, strconv.Itoa(i)), time.Duration(1*time.Second))
 		if err == nil {
+			openPorts = append(openPorts, i)
 			fmt.Println("[+] Port", i, "open")
 			result.Close()
+		} else {
+			if *verbose {
+				fmt.Println(err)
+			}
 		}
 	}
 
 	count += restOfPorts - 1
 
 	wg.Wait()
-	fmt.Println(restOfPorts)
-	fmt.Println("Done closed or filtered Ports:", count)
+	fmt.Println("Open Ports:", openPorts)
+	fmt.Println("Done Total Ports Scanned:", count)
 }
